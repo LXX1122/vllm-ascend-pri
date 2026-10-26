@@ -1828,7 +1828,7 @@ For ultra-long sequence scenarios, support can be achieved by adjusting the PD (
 
 ### 5.3 KV Cache Pool Deployment {: #53-memcache-kv-cache-pool-deployment }
 
-=== "A5 KV Pooling"
+=== "950DT KV Pooling"
 
     #### 950DT Single-Node PD Separation Deployment with Memcache KV Cache Pool {: #54-950dt-single-node-pd-separation-deployment }
 
