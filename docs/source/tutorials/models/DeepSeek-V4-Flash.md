@@ -1856,7 +1856,9 @@ For ultra-long sequence scenarios, support can be achieved by adjusting the PD (
 
 ### 5.3 KV Cache Pool Deployment {: #53-memcache-kv-cache-pool-deployment }
 
-=== "950DT KV Pooling"
+This section provides PD separation deployment examples with a KV Cache Pool for cross-engine KV cache reuse. The 950DT and A3 examples use the MemCache backend, while the A2 examples cover both Mooncake and MemCache. Each hardware tab describes backend and storage configuration, Prefill and Decode startup steps, and KV cache reuse verification.
+
+=== "950DT products"
 
     #### 950DT Single-Node PD Separation Deployment with Memcache KV Cache Pool {: #54-950dt-single-node-pd-separation-deployment }
 
@@ -2143,7 +2145,7 @@ For ultra-long sequence scenarios, support can be achieved by adjusting the PD (
 
             To verify KV Cache Pool reuse, send an initial request to warm up the cache, then send another request with the same identical token prefix. Check the Prefill logs for KV Pool lookup/get/put operations and cache-hit information. An HTTP 200 response alone does not confirm KV Cache Pool reuse. For details,refer to [KV Cache Pool (Ascend Store)](../../user_guide/feature_guide/kv_cache_pool_ascend_store.md#scenario-2-memcache-backend).
 
-=== "A3 KV Pooling"
+=== "A3 series"
 
     #### A3 1P1D Deployment with Memcache KV Cache Pool {: #53-a3-1p1d-deployment-with-memcache-kv-cache-pool }
 
@@ -2602,7 +2604,7 @@ For ultra-long sequence scenarios, support can be achieved by adjusting the PD (
         For capacity tuning, optional SSD configuration, and troubleshooting, refer to
         [KV Cache Pool (Ascend Store)](../../user_guide/feature_guide/kv_cache_pool_ascend_store.md).
 
-=== "A2 KV Pooling"
+=== "A2 series"
 
     #### A2 KV Pooling: Mooncake SSD Profile and Memcache Integration {: #526-a2-kv-pooling-mooncake-ssd-profile-and-memcache-integration }
 
