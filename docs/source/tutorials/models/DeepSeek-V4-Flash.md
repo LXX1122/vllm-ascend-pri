@@ -453,7 +453,7 @@ The following sections describe multi-node PD separation deployment on Atlas 800
 
 === "950DT products with DSpark"
 
-    #### 5.2.5 950DT products PD Separation Deployment {: #524-950dt-series-pd-separation-deployment }
+    #### 950DT products PD Separation Deployment {: #524-950dt-series-pd-separation-deployment }
 
     This section describes PD separation on a single 950DT products node (96GB × 8). The Prefill instance uses DP1/TP1 with PCP4 on NPUs 0–3, while the Decode instances use DP4/TP1 with PCP1 on NPUs 4–7. KV Cache is transferred from Prefill to Decode using MooncakeConnectorV2.
 
@@ -739,7 +739,7 @@ The following sections describe multi-node PD separation deployment on Atlas 800
 
 === "A3 series"
 
-    #### 5.2.1 A3 Series PD Separation Deployment
+    #### A3 Series PD Separation Deployment {: #521-a3-series-pd-separation-deployment }
 
     This section shows the deployment guide of DeepSeek-V4-Flash on Atlas 800I A3 (128GB × 8) multi-node environment with 1P1D for better performance.
 
@@ -1341,7 +1341,7 @@ The following sections describe multi-node PD separation deployment on Atlas 800
 
 === "A2 series"
 
-    #### 5.2.2 A2 Series PD Separation Deployment
+    #### A2 Series PD Separation Deployment {: #522-a2-series-pd-separation-deployment }
 
     This section shows the deployment guide of DeepSeek-V4-Flash on Atlas 800I A2 (64GB × 8) multi-node environment with 4\*1P 1\*4D for better performance.
 
@@ -1621,7 +1621,7 @@ The following sections describe multi-node PD separation deployment on Atlas 800
 
 === "A2 series with DSpark"
 
-    #### 5.2.3 A2 Series PD Separation Deployment with DSpark (2P2D, 32 cards) {: #525-a2-series-pd-separation-deployment-with-dspark-2p2d-32-cards }
+    #### A2 Series PD Separation Deployment with DSpark (2P2D, 32 cards) {: #525-a2-series-pd-separation-deployment-with-dspark-2p2d-32-cards }
 
     Use `DeepSeek-V4-Flash-0731-w8a8` on four Atlas 800I A2 servers (8 NPUs per server). Choose the workload settings from the table before starting either role. The settings below retain the configurations selected in completed A2 measurements; they are starting points for the listed workloads, not a universal optimum across workloads or software versions.
 
@@ -1822,11 +1822,9 @@ The following sections describe multi-node PD separation deployment on Atlas 800
 
     P explicitly selects `ASCEND_LOCAL_COMM_RES` version 1.3 in the measured image. Verify the actual transport engine on both roles when changing images; an environment variable alone is not proof of matching engines. The historical `VLLM_PREFIX_CACHE_RETENTION_INTERVAL` environment variable was not read by that image and is omitted here. Check the resolved `--prefix-cache-retention-interval` before changing retention; zero does not disable all prefix reuse. D stays in graph mode for target and draft. Recheck dispatch capacity, KV residency and throughput together when adjusting budgets; a low KV usage gauge does not exclude other memory or compute bottlenecks.
 
-=== "Ultra-Long Sequence"
+#### 5.2.4 Ultra-Long Sequence Deployment {: #523-ultra-long-sequence-deployment }
 
-    #### 5.2.4 Ultra-Long Sequence Deployment {: #523-ultra-long-sequence-deployment }
-
-    For ultra-long sequence scenarios, support can be achieved by adjusting the PD (Prefill/Decode) ratio and the model parallelism strategy. For example, in a 1M sequence scenario, a 1\*4P-1\*4D ratio can be used, with the model parallelism set to DP4TP8 mode.
+For ultra-long sequence scenarios, support can be achieved by adjusting the PD (Prefill/Decode) ratio and the model parallelism strategy. For example, in a 1M sequence scenario, a 1\*4P-1\*4D ratio can be used, with the model parallelism set to DP4TP8 mode.
 
 ### 5.3 KV Cache Pool Deployment {: #53-memcache-kv-cache-pool-deployment }
 
@@ -1834,13 +1832,13 @@ The following sections describe multi-node PD separation deployment on Atlas 800
 
     #### 950DT Single-Node PD Separation Deployment with Memcache KV Cache Pool {: #54-950dt-single-node-pd-separation-deployment }
 
-    This section extends [Section 5.2.5](#524-950dt-series-pd-separation-deployment) with a Memcache-backed KV Cache Pool on a single 950DT products node. Prefill uses NPUs `0,1,2,3`, while Decode uses NPUs `4,5,6,7`. The existing external DP load balancing, API ports, DP RPC ports, and proxy configuration remain unchanged.
+    This section extends [the 950DT PD deployment example](#524-950dt-series-pd-separation-deployment) with a Memcache-backed KV Cache Pool on a single 950DT products node. Prefill uses NPUs `0,1,2,3`, while Decode uses NPUs `4,5,6,7`. The existing external DP load balancing, API ports, DP RPC ports, and proxy configuration remain unchanged.
 
     - `MooncakeConnectorV2` transfers KV Cache from Prefill to Decode for ongoing requests.
     - `AscendStoreConnector` integrates with the Memcache KV Cache Pool to support external KV Cache storage and reuse.
     - In this example, the Prefill instance is configured for pool lookup, loading, and storage, while Decode continues to receive KV Cache from Prefill.
 
-    Reuse the shared `launch_online_dp.py` from [Section 5.2.5](#524-950dt-series-pd-separation-deployment). Save the pooled templates below as `run_prefill_memcache.sh` and `run_decode_memcache.sh`, and select them with `--script`. These templates use `MultiConnector` and the required Memcache environment variables.
+    Reuse the shared `launch_online_dp.py` from [the 950DT PD deployment example](#524-950dt-series-pd-separation-deployment). Save the pooled templates below as `run_prefill_memcache.sh` and `run_decode_memcache.sh`, and select them with `--script`. These templates use `MultiConnector` and the required Memcache environment variables.
 
     Keep `export VLLM_USE_V2_MODEL_RUNNER=1` in both pooled templates. PCP requires Model Runner V2. DSA-CP is unsupported with V2, so do not set `enable_dsa_cp` in `--additional-config`.
 
@@ -2113,7 +2111,7 @@ The following sections describe multi-node PD separation deployment on Atlas 800
 
         3. Start the Proxy and Verify KV Cache Pool Reuse
 
-            Wait until the Prefill API endpoint and all four Decode API endpoints are healthy, then start the proxy using the configuration from [Section 5.2.5](#524-950dt-series-pd-separation-deployment). Send a generation request to `<proxy_ip>:1999` as described in [Section 6](#6-functional-verification). Confirm that the response contains generated text.
+            Wait until the Prefill API endpoint and all four Decode API endpoints are healthy, then start the proxy using the configuration from [the 950DT PD deployment example](#524-950dt-series-pd-separation-deployment). Send a generation request to `<proxy_ip>:1999` as described in [Section 6](#6-functional-verification). Confirm that the response contains generated text.
 
             To verify KV Cache Pool reuse, send an initial request to warm up the cache, then send another request with the same identical token prefix. Check the Prefill logs for KV Pool lookup/get/put operations and cache-hit information. An HTTP 200 response alone does not confirm KV Cache Pool reuse. For details,refer to [KV Cache Pool (Ascend Store)](../../user_guide/feature_guide/kv_cache_pool_ascend_store.md#scenario-2-memcache-backend).
 
@@ -2235,7 +2233,7 @@ The following sections describe multi-node PD separation deployment on Atlas 800
         For additional parameters and capacity constraints, refer to
         [Memcache and vLLM separated deployment](../../user_guide/feature_guide/kv_cache_pool_ascend_store.md#Memcache-and-vLLM-Separated-Deployment).
 
-        Reuse `launch_online_dp.py` from Section 5.2.1. Set `MEMCACHE_INSTALL_PATH` to
+        Reuse `launch_online_dp.py` from [the A3 PD deployment example](#521-a3-series-pd-separation-deployment). Set `MEMCACHE_INSTALL_PATH` to
         the `Location` reported by `pip show memcache_hybrid`, and set
         `MEMCACHE_CONFIG_DIR` to the absolute directory containing the configuration
         files above on both nodes. Use the same checkpoint on both nodes. Keep
@@ -2274,7 +2272,7 @@ The following sections describe multi-node PD separation deployment on Atlas 800
     2. <a id="532-start-the-prefill-node-with-pooling"></a>**Start the Prefill Node with Pooling**
 
         On the Prefill node, save the following script as `run_dp_template.sh` beside
-        `launch_online_dp.py` from Section 5.2.1. Replace the network, model, and
+        `launch_online_dp.py` from [the A3 PD deployment example](#521-a3-series-pd-separation-deployment). Replace the network, model, and
         Memcache path placeholders for this node.
 
         ```shell
@@ -2381,7 +2379,7 @@ The following sections describe multi-node PD separation deployment on Atlas 800
     3. <a id="533-start-the-decode-node-with-pooling"></a>**Start the Decode Node with Pooling**
 
         On the Decode node, save the following script as `run_dp_template.sh` beside
-        `launch_online_dp.py` from Section 5.2.1. Replace the network, model, and
+        `launch_online_dp.py` from [the A3 PD deployment example](#521-a3-series-pd-separation-deployment). Replace the network, model, and
         Memcache path placeholders for this node.
 
         ```shell
