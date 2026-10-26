@@ -2537,7 +2537,7 @@ For ultra-long sequence scenarios, support can be achieved by adjusting the PD (
             --decoder-ports {7100..7115}
         ```
 
-        Send requests to the proxy at `http://<PREFILL_NODE_IP>:1999`, using the
+        Send requests to the proxy at ``http://<PREFILL_NODE_IP>:1999``, using the
         `dsv4` served model name from Section 6. Verify both the response and the
         P-to-D transfer in engine logs. To check pool reuse, send the same long prompt
         (at least 4096 tokens for this example) twice, allowing the first request's
