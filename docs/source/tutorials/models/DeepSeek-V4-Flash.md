@@ -453,7 +453,7 @@ The following sections describe multi-node PD separation deployment on Atlas 800
 
 === "950DT products with DSpark"
 
-    #### 950DT products PD Separation Deployment {: #524-950dt-series-pd-separation-deployment }
+    #### 950DT products PD Separation Deployment with DSpark {: #524-950dt-series-pd-separation-deployment }
 
     This section describes PD separation on a single 950DT products node (96GB × 8). The Prefill instance uses DP1/TP1 with PCP4 on NPUs 0–3, while the Decode instances use DP4/TP1 with PCP1 on NPUs 4–7. KV Cache is transferred from Prefill to Decode using MooncakeConnectorV2.
 
@@ -1822,7 +1822,7 @@ The following sections describe multi-node PD separation deployment on Atlas 800
 
     P explicitly selects `ASCEND_LOCAL_COMM_RES` version 1.3 in the measured image. Verify the actual transport engine on both roles when changing images; an environment variable alone is not proof of matching engines. The historical `VLLM_PREFIX_CACHE_RETENTION_INTERVAL` environment variable was not read by that image and is omitted here. Check the resolved `--prefix-cache-retention-interval` before changing retention; zero does not disable all prefix reuse. D stays in graph mode for target and draft. Recheck dispatch capacity, KV residency and throughput together when adjusting budgets; a low KV usage gauge does not exclude other memory or compute bottlenecks.
 
-#### 5.2.4 Ultra-Long Sequence Deployment {: #523-ultra-long-sequence-deployment }
+#### 5.2.1 Ultra-Long Sequence Deployment {: #523-ultra-long-sequence-deployment }
 
 For ultra-long sequence scenarios, support can be achieved by adjusting the PD (Prefill/Decode) ratio and the model parallelism strategy. For example, in a 1M sequence scenario, a 1\*4P-1\*4D ratio can be used, with the model parallelism set to DP4TP8 mode.
 
