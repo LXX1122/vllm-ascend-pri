@@ -737,6 +737,34 @@ The following sections describe multi-node PD separation deployment on Atlas 800
 
         Wait until the Prefill API endpoint and all four Decode API endpoints are healthy, then deploy the P-D disaggregation proxy as described in [Prefill-Decode Disaggregation (Deepseek)](../features/pd_disaggregation_mooncake_multi_node.md).
 
+    Key Parameter Descriptions:
+
+    - `--no-disable-hybrid-kv-cache-manager` keeps the hybrid KV cache manager enabled. DeepSeek-V4 KV Pool deployments require this flag; otherwise, the service may OOM during startup.
+
+    - `--enforce-eager` forces eager execution on Prefill nodes instead of graph compilation.
+
+    - `--trust-remote-code` allows the model repository's custom code to be loaded. Only use trusted model repositories.
+
+    - `--prefill-context-parallel-size` configures prefill context parallelism (PCP) on Model Runner V2 (MRv2), replacing the DSA-CP configuration used on MRv1. Besides speeding up long-context prefill, enabling PCP also shards the `o_proj` weights across the PCP group, providing partial tensor parallelism even when `--tensor-parallel-size` is `1` and relieving memory pressure.
+
+    - `--kv-transfer-config` configures KV cache transfer between the Prefill producer and Decode consumer in PD separation.
+
+    - `MooncakeConnectorV2` transfers KV cache from Prefill to Decode in PD separation. Configure Prefill with `kv_role: kv_producer` and Decode with `kv_role: kv_consumer`, allowing Decode to reuse the KV cache computed by Prefill for subsequent token generation.
+
+    - `kv_connector_extra_config.prefill.dp_size/tp_size` and `decode.dp_size/tp_size` must match the actual global DP and TP layout on the Prefill and Decode sides, respectively.
+
+    - `scheduler_config.recompute_scheduler_enable: true` enables the recomputation scheduler. When the Decode node has insufficient KV cache space, requests are sent to Prefill for KV cache recomputation. Enable it only on PD Decode nodes; the legacy top-level key is deprecated.
+
+    - `--speculative-config`: Prefill and Decode must use the same DSpark `num_speculative_tokens` value. Use the value declared by the checkpoint; this example uses `5`. The nested `enforce_eager` applies to DSpark draft execution, while the top-level `--enforce-eager` keeps the Prefill target model in eager mode.
+
+    - `--kv-cache-dtype fp8` and `--attention_config.indexer_kv_dtype fp8` use FP8 KV cache. The P and D sides must use the same KV data types so that the transferred KV cache is directly reusable.
+
+    - `enable_fused_mc2: 0` disables the Fused MC2 fusion operator on Prefill; `multistream_overlap_shared_expert: true` overlaps shared-expert computation with MoE communication instead, and `enable_shared_expert_dp: true` places shared experts on DP ranks.
+
+    - `ascend_compilation_config.enable_npugraph_ex: true` enables the extended NPU graph mode on Decode for graph compilation, while Prefill runs in eager mode. `enable_static_kernel: false` uses dynamic-shape kernels instead of static-shape kernels for ACL Graph execution.
+
+    - `combine_quant_mode: 4` forces the MoE MC2 combine stage on Decode nodes to use FP8 (MXFP float8_e4m3) communication quantization.
+
 === "A3 series"
 
     #### A3 Series PD Separation Deployment {: #521-a3-series-pd-separation-deployment }
