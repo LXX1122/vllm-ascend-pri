@@ -588,6 +588,7 @@ The following sections describe multi-node PD separation deployment on Atlas 800
             export TASK_QUEUE_ENABLE=1
             export HCCL_OP_EXPANSION_MODE=CCU_SCHED
             export VLLM_PREFIX_CACHE_RETENTION_INTERVAL=4096
+            export VLLM_USE_FASTOKENS=1
 
             # With --pcp-size 4, the launcher passes 0,1,2,3 for this Prefill instance.
             export ASCEND_RT_VISIBLE_DEVICES="$1"
@@ -659,6 +660,7 @@ The following sections describe multi-node PD separation deployment on Atlas 800
             export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
             export HCCL_BUFFSIZE=1024
             export TASK_QUEUE_ENABLE=1
+            export VLLM_USE_FASTOKENS=1
 
             # The Decode group uses NPUs 4-7; each DP rank sees one of those NPUs.
             export ASCEND_RT_VISIBLE_DEVICES="$(( $1 + 4 ))"
@@ -744,6 +746,8 @@ The following sections describe multi-node PD separation deployment on Atlas 800
     - `--enforce-eager` forces eager execution on Prefill nodes instead of graph compilation.
 
     - `--trust-remote-code` allows the model repository's custom code to be loaded. Only use trusted model repositories.
+
+    - `VLLM_USE_V2_MODEL_RUNNER=1`: Keep this environment variable exported in both the Prefill and Decode pooling scripts. PCP requires Model Runner V2, which does not support DSA-CP. Therefore, do not set `enable_dsa_cp` in `--additional-config`.
 
     - `--prefill-context-parallel-size` configures prefill context parallelism (PCP) on Model Runner V2 (MRv2), replacing the DSA-CP configuration used on MRv1. Besides speeding up long-context prefill, enabling PCP also shards the `o_proj` weights across the PCP group, providing partial tensor parallelism even when `--tensor-parallel-size` is `1` and relieving memory pressure.
 
@@ -1647,6 +1651,10 @@ The following sections describe multi-node PD separation deployment on Atlas 800
 
     Common Issues Tip: If you encounter issues with PD separation deployment, please refer to the [Public FAQs](../../faqs.md) for troubleshooting.
 
+    ##### Ultra-Long Sequence Deployment {: #523-ultra-long-sequence-deployment }
+
+    For ultra-long sequence scenarios, support can be achieved by adjusting the PD (Prefill/Decode) ratio and the model parallelism strategy. For example, in a 1M sequence scenario, a 1\*4P-1\*4D ratio can be used, with the model parallelism set to DP4TP8 mode.
+
 === "A2 series with DSpark"
 
     #### A2 Series PD Separation Deployment with DSpark (2P2D, 32 cards) {: #525-a2-series-pd-separation-deployment-with-dspark-2p2d-32-cards }
@@ -1850,10 +1858,6 @@ The following sections describe multi-node PD separation deployment on Atlas 800
 
     P explicitly selects `ASCEND_LOCAL_COMM_RES` version 1.3 in the measured image. Verify the actual transport engine on both roles when changing images; an environment variable alone is not proof of matching engines. The historical `VLLM_PREFIX_CACHE_RETENTION_INTERVAL` environment variable was not read by that image and is omitted here. Check the resolved `--prefix-cache-retention-interval` before changing retention; zero does not disable all prefix reuse. D stays in graph mode for target and draft. Recheck dispatch capacity, KV residency and throughput together when adjusting budgets; a low KV usage gauge does not exclude other memory or compute bottlenecks.
 
-#### 5.2.1 Ultra-Long Sequence Deployment {: #523-ultra-long-sequence-deployment }
-
-For ultra-long sequence scenarios, support can be achieved by adjusting the PD (Prefill/Decode) ratio and the model parallelism strategy. For example, in a 1M sequence scenario, a 1\*4P-1\*4D ratio can be used, with the model parallelism set to DP4TP8 mode.
-
 ### 5.3 KV Cache Pool Deployment {: #53-memcache-kv-cache-pool-deployment }
 
 This section provides PD separation deployment examples with a KV Cache Pool for cross-engine KV cache reuse. The 950DT and A3 examples use the MemCache backend, while the A2 examples cover both Mooncake and MemCache. Each hardware tab describes backend and storage configuration, Prefill and Decode startup steps, and KV cache reuse verification.
@@ -1944,6 +1948,7 @@ This section provides PD separation deployment examples with a KV Cache Pool for
         export TASK_QUEUE_ENABLE=1
         export HCCL_OP_EXPANSION_MODE=CCU_SCHED
         export VLLM_PREFIX_CACHE_RETENTION_INTERVAL=4096
+        export VLLM_USE_FASTOKENS=1
 
         # With --pcp-size 4, the launcher passes 0,1,2,3 for this Prefill instance.
         export ASCEND_RT_VISIBLE_DEVICES="$1"
@@ -2040,6 +2045,7 @@ This section provides PD separation deployment examples with a KV Cache Pool for
         export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
         export HCCL_BUFFSIZE=1024
         export TASK_QUEUE_ENABLE=1
+        export VLLM_USE_FASTOKENS=1
 
         # The Decode group uses NPUs 4-7; each DP rank sees one of those NPUs.
         export ASCEND_RT_VISIBLE_DEVICES="$(( $1 + 4 ))"
@@ -2144,6 +2150,12 @@ This section provides PD separation deployment examples with a KV Cache Pool for
             Wait until the Prefill API endpoint and all four Decode API endpoints are healthy, then start the proxy using the configuration from [the 950DT PD deployment example](#524-950dt-series-pd-separation-deployment). Send a generation request to `<proxy_ip>:1999` as described in [Section 6](#6-functional-verification). Confirm that the response contains generated text.
 
             To verify KV Cache Pool reuse, send an initial request to warm up the cache, then send another request with the same identical token prefix. Check the Prefill logs for KV Pool lookup/get/put operations and cache-hit information. An HTTP 200 response alone does not confirm KV Cache Pool reuse. For details,refer to [KV Cache Pool (Ascend Store)](../../user_guide/feature_guide/kv_cache_pool_ascend_store.md#scenario-2-memcache-backend).
+
+    Key pooling parameters:
+
+    - `AscendStoreConnector` integrates with the MemCache KV Cache Pool to support external KV cache storage and reuse. In this example, Prefill handles pool lookups, loading, and storage, while Decode receives KV cache from Prefill.
+
+    - `backend: "memcache"` selects MemCache as the pool storage backend. On Prefill, `use_layerwise: true` enables layer-by-layer KV cache storage and loading, while `layerwise_prefetch_layers: 3` configures prefetching to load KV cache ahead of layer execution.
 
 === "A3 series"
 
