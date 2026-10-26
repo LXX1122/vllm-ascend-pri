@@ -1645,7 +1645,7 @@ The following sections describe multi-node PD separation deployment on Atlas 800
     | `decode-16k` | 16K / 1K, pure D | 4096 / on | 1 / 128 | 4 |
     | `decode-long` | 64K / 1K or 128K / 1K, pure D | 4096 / on | 5 / 42 | 1 |
     | `cold-pd` | PC0 pure P or full PD | 8192 / off | 1 / 128 | 4 |
-    | `pc90` | Distinct-suffix, multiple-prefix pooling; see Section 5.2.6 | 8192 / on | 1 / 128 | 4 |
+    | `pc90` | Distinct-suffix, multiple-prefix pooling; see [A2 KV Pooling](#526-a2-kv-pooling-mooncake-ssd-profile-and-memcache-integration) | 8192 / on | 1 / 128 | 4 |
 
     The recorded client loads below are separate from the server profiles. Input counts include the measured client's 84-token template offset for these ordinary-length cases. Keep the payload definition and tokenizer unchanged when comparing them.
 
@@ -2132,7 +2132,7 @@ The following sections describe multi-node PD separation deployment on Atlas 800
     The deployment follows the same Memcache service setup as
     [DeepSeek-V4.1-Flash](DeepSeek-V4.1-Flash.md#531-prepare-the-memcache-services),
     while all non-pooling options and the parallel layout follow the
-    `A3 series with dspark` example in Section 5.2.1. `MooncakeHybridConnector`
+    [A3 series with DSpark](#a3-series-pd-separation-deployment-with-dspark) tab in Section 5.2. `MooncakeHybridConnector`
     continues to transfer KV
     cache from Prefill to Decode, while `AscendStoreConnector` stores reusable KV
     cache in Memcache. Both connectors are configured as children of
