@@ -968,24 +968,21 @@ class AscendSFAImpl(MLAAttentionImpl):
         # scenario the graph is captured once, so every later weight update
         # reload has to refresh the stored tensors in place instead of
         # rebinding the attributes to freshly allocated tensors.
-        # `replace_parameter(..., prefer_copy=True)` does exactly that: it
-        # copies into the existing storage while the new value stays
+        # `replace_parameter(..., prefer_copy=True)` does exactly that on
+        # v0.31.0: it copies into the existing storage while the new value stays
         # compatible, and rebinds only when shape/dtype/device actually
-        # changes. This mirrors how upstream vLLM refreshes
+        # changes. vLLM main (#62326) dropped `prefer_copy` and keeps the
+        # parameter object by default. This mirrors how upstream vLLM refreshes
         # `MLAAttention.W_UV`/`W_UK_T`, and unlike a plain `copy_` it cannot
         # raise on a shape mismatch.
-        replace_parameter(
-            self,
-            "W_UV",
-            W_UV.transpose(0, 1).contiguous(),  # (L, N, V) -> (N, L, V)
-            prefer_copy=True,
-        )
-        replace_parameter(
-            self,
-            "W_UK_T",
-            W_UK.permute(1, 2, 0).contiguous(),  # (L, N, P) -> (N, P, L)
-            prefer_copy=True,
-        )
+        w_uv = W_UV.transpose(0, 1).contiguous()  # (L, N, V) -> (N, L, V)
+        w_uk_t = W_UK.permute(1, 2, 0).contiguous()  # (L, N, P) -> (N, P, L)
+        if vllm_version_is("0.31.0"):
+            replace_parameter(self, "W_UV", w_uv, prefer_copy=True)
+            replace_parameter(self, "W_UK_T", w_uk_t, prefer_copy=True)
+        else:
+            replace_parameter(self, "W_UV", w_uv)
+            replace_parameter(self, "W_UK_T", w_uk_t)
 
         # Dispose kv_b_proj since it is replaced by W_UV and W_UK_T to save memory.
         # RL keeps it: it is the only source of W_UV/W_UK_T, so every weight
@@ -1362,22 +1359,9 @@ class AscendSFAImpl(MLAAttentionImpl):
 
     def _v_up_proj(self, x):
         if hasattr(torch_npu, "npu_transpose_batchmatmul"):
-            # aclnn TransposeBatchMatMul with perm_x1=(1,0,2) (internal
-            # transpose) requires N*L < 65536 on older CANN binaries.
-            #   - If satisfied: keep x as (B, N, L) and let the operator
-            #     transpose internally, saving a contiguous copy.
-            #   - Otherwise: explicit transpose to (N, B, L) and use
-            #     perm_x1=(0,1,2), which downgrades the check to L < 65536.
-            # TODO: CANN 9.2 removes the N*L<65536 check; once it is the
-            # deployment baseline, collapse this branch to perm_x1=(1,0,2).
-            if self.local_num_heads * self.kv_lora_rank < 65536:
-                # (B, N, L) -> operator transposes internally -> (B, N, V)
-                x = x.view(-1, self.local_num_heads, self.kv_lora_rank)
-                x = torch_npu.npu_transpose_batchmatmul(x, self.W_UV, perm_x1=(1, 0, 2), perm_y=(1, 0, 2))
-            else:
-                # (B, N, L) -> (N, B, L) -> (B, N, V); perm_x1=(0,1,2) skips inner transpose
-                x = x.view(-1, self.local_num_heads, self.kv_lora_rank).transpose(0, 1).contiguous()
-                x = torch_npu.npu_transpose_batchmatmul(x, self.W_UV, perm_x1=(0, 1, 2), perm_y=(1, 0, 2))
+            # (B, N, L) -> operator transposes internally -> (B, N, V)
+            x = x.view(-1, self.local_num_heads, self.kv_lora_rank)
+            x = torch_npu.npu_transpose_batchmatmul(x, self.W_UV, perm_x1=(1, 0, 2), perm_y=(1, 0, 2))
             # (B, N, V) -> (B, N * V)
             x = x.reshape(-1, self.local_num_heads * self.v_head_dim)
         else:
